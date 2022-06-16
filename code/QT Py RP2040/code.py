@@ -1,77 +1,50 @@
 # SPDX-FileCopyrightText: 2017 Mikey Sklar for Adafruit Industries
-#
+# SPDX-FileCopyrightText: Original code from https://learn.adafruit.com/kaleidoscope-eyes-neopixel-led-goggles-trinket-gemma/circuitpython-code
 # SPDX-License-Identifier: MIT
-
-#
-# Kaleidoscope_Eyes_NeoPixel_LED_Goggles.py
-#
-import time
+# SPDX-FileContributor: Modified by Sam Knowles 2022
 
 import board
-import neopixel
-
+import time
 import random
 
+import neopixel
+from rainbowio import colorwheel
+
 numpix = 32  # Number of NeoPixels
-pixpin = board.D0  # Pin where NeoPixels are connected
+pixpin = board.MOSI  # Pin where NeoPixels are connected
 
-mode = 0  # Current animation effect
 offset = 0  # Position of spinny eyes
-
-rgb_colors = ([255, 0, 0],  # red
-              [0, 255, 0],  # green
-              [0, 0, 255])  # blue
-
-rgb_idx = 0  # index counter - primary color we are on
-color = rgb_colors[rgb_idx]
+color = colorwheel(0)   # Colour of spinny eyes
 prevtime = 0
 
-pixels = neopixel.NeoPixel(pixpin, numpix, brightness=.3, auto_write=False)
+# Change brightness if they're too bright or dim
+pixels = neopixel.NeoPixel(pixpin, numpix, brightness=0.3, auto_write=False)
 
 prevtime = time.monotonic()
 
 while True:
-    i = 0
-    t = 0
-
-    # Random sparks - just one LED on at a time!
-    if mode == 0:
-        i = random.randint(0, (numpix - 1))
-        pixels[i] = color
-        pixels.write()
-        time.sleep(0.01)
-        pixels[i] = (0, 0, 0)
-
-    # Spinny wheels (8 LEDs on at a time)
-    elif mode == 1:
-        for i in range(0, numpix):
-            c = 0
-
-            # 4 pixels on...
-            if ((offset + i) & 7) < 2:
-                c = color
-
-            pixels[i] = c  # First eye
-            pixels[(numpix - 1) - i] = c  # Second eye (flipped)
-
-        pixels.write()
-        offset += 1
-        time.sleep(0.05)
-
     t = time.monotonic()
 
-    if (t - prevtime) > 8:  # Every 8 seconds...
-        mode += 1  # Next mode
-        if mode > 1:  # End of modes?
-            mode = 0  # Start modes over
+    # Spinny wheels (8 LEDs on at a time)
+    for i in range(0, numpix):
+        c = 0   # Sets the default colour to black (0)
 
-        if rgb_idx > 2:  # reset R-->G-->B rotation
-            rgb_idx = 0
+        # 4 pixels on...
+        if ((offset + i) & 7) < 2:
+            # That are set to the selected colour!
+            c = color
 
-        color = rgb_colors[rgb_idx]  # next color assignment
-        rgb_idx += 1
+        pixels[i] = c  # First eye
+        pixels[(numpix - 1) - i] = c  # Second eye (flipped)
 
-        for i in range(0, numpix):
-            pixels[i] = (0, 0, 0)
+    pixels.write()  # Write the pattern the pixels
+    offset += 1     # Moves the pattern "forward" by one pixel each loop
+    time.sleep(0.05)# And this controls how "fast" the pattern spins; a larger number will make it slower
+    
+    # Wait a random time between 1 and 10 seconds
+    if (t - prevtime) > random.randrange(2,10):
+        # Then set the colour to a random one!
+        color = colorwheel(random.randrange(0,255))
 
+        # And reset the timer
         prevtime = t
